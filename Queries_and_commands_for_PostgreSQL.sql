@@ -51,7 +51,16 @@ alter database <database> rename to <new db name>;
 -- check permissions on table
 select * from information_schema.role_table_grants where table_name = 'build';
 
-
+-- Total size of the biggest 10 tables;
+SELECT
+t.tablename,
+pg_size_pretty(pg_total_relation_size('"' || t.schemaname || '"."' || t.tablename || '"')) AS table_total_disc_size
+FROM pg_tables t
+WHERE
+t.schemaname = 'public'
+ORDER BY
+pg_total_relation_size('"' || t.schemaname || '"."' || t.tablename || '"') DESC
+LIMIT 10;
 
     
 --------------------
@@ -100,7 +109,7 @@ SELECT relname, 100 * idx_scan / (seq_scan + idx_scan) percent_of_times_index_us
 FROM pg_stat_user_tables 
 ORDER BY n_live_tup DESC;
 
--- Get indexes of tables
+-- Get a list of tables with indexes
 select
     t.relname as table_name,
     i.relname as index_name,
@@ -123,6 +132,58 @@ group by
 order by
     t.relname,
     i.relname;
+                                                                                                    
+-- List Tables with the size and the index size 
+SELECT
+    table_name,
+    pg_size_pretty(table_size) AS table_size,
+    pg_size_pretty(indexes_size) AS indexes_size,
+    pg_size_pretty(total_size) AS total_size
+FROM (
+    SELECT
+        table_name,
+        pg_table_size(table_name) AS table_size,
+        pg_indexes_size(table_name) AS indexes_size,
+        pg_total_relation_size(table_name) AS total_size
+    FROM (
+        SELECT ('"' || table_schema || '"."' || table_name || '"') AS table_name
+        FROM information_schema.tables
+    ) AS all_tables
+    ORDER BY total_size DESC
+) AS pretty_sizes
+
+                                                                                                    
+-- List every Index in the database with there size
+WITH tbl_spc AS (
+SELECT ts.spcname AS spcname
+FROM pg_tablespace ts 
+JOIN pg_database db ON db.dattablespace = ts.oid
+WHERE db.datname = current_database()
+)
+(
+SELECT
+t.schemaname,
+t.tablename,
+pg_table_size('"' || t.schemaname || '"."' || t.tablename || '"') AS table_disc_size,
+NULL as index,
+0 as index_disc_size,
+COALESCE(t.tablespace, ts.spcname) AS tablespace
+FROM pg_tables t, tbl_spc ts
+
+UNION ALL
+
+SELECT
+i.schemaname,
+i.tablename,
+0,
+i.indexname,
+pg_relation_size('"' || i.schemaname || '"."' || i.indexname || '"'),
+COALESCE(i.tablespace, ts.spcname)
+FROM pg_indexes i, tbl_spc ts
+)
+ORDER BY table_disc_size DESC,index_disc_size DESC;
+                                                                                                    
+                                                                                                    
     
 -- How many indexes are in cache
 SELECT sum(idx_blks_read) as idx_read, sum(idx_blks_hit) as idx_hit, (sum(idx_blks_hit) - sum(idx_blks_read)) / sum(idx_blks_hit) as ratio FROM pg_statio_user_indexes;
