@@ -62,6 +62,11 @@ ORDER BY
 pg_total_relation_size('"' || t.schemaname || '"."' || t.tablename || '"') DESC
 LIMIT 10;
 
+-- Check if a backup is running
+select pg_is_in_backup();
+
+-- Stop a running backup
+select pg_stop_backup();
     
 --------------------
 -- Data Integrity --
