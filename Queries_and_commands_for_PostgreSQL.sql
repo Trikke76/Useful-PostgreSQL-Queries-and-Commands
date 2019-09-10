@@ -198,6 +198,24 @@ select relname, pg_size_pretty(pg_relation_size(relname::regclass)) as size, seq
 
 -- Checkpoints
 select 'bad' as checkpoints from pg_stat_bgwriter where checkpoints_req > checkpoints_timed;
+                                                
+-- Check for indexes, drop and recreate them
+# \d history_uint
+              Table "public.history_uint"
+ Column |     Type      |           Modifiers
+--------+---------------+-------------------------------
+ itemid | bigint        | not null
+ clock  | integer       | not null default 0
+ value  | numeric(20,0) | not null default '0'::numeric
+ ns     | integer       | not null default 0
+Indexes:
+    "history_uint_1" btree (itemid, clock)
+
+
+# drop index history_uint_1;
+DROP INDEX
+
+# create index CONCURRENTLY history_uint_1 on history_uint (itemid, clock);
 
 --------------
 -- Activity --
