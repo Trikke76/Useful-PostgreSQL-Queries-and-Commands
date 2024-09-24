@@ -36,11 +36,11 @@ def remove_data(hostname, username, path):
 
 def main():
     # Define variables for source and target servers
-    source_server = "<source db server>"
+    source_server = "<source db server>"  # server where we want the data to come from
     target_server = "<target db server>"  # This is also the hostname we connect to
     
-    username = "postgres"
-    data_path = "/var/lib/pgsql/14/data"
+    username = "postgres" # user to connect to the db
+    data_path = "/var/lib/pgsql/14/data" # path to restore data to
 
     # Check initial service status
     initial_status = check_service_status(target_server, username)
@@ -74,7 +74,7 @@ def main():
 
     # Run Barman recovery command with --jobs 4
     print("\nRunning Barman recovery command with parallel processing...")
-    barman_command = f'barman recover --jobs 4 --remote-ssh-command "ssh postgres@{target_server}" {source_server} latest /var/lib/pgsql/14/data'
+    barman_command = f'barman recover --jobs 4 --remote-ssh-command "ssh postgres@{target_server}" {source_server} latest {data_path}'
     barman_result = run_local_command(barman_command)
     print(f"Barman recovery result:\n{barman_result}")
 
